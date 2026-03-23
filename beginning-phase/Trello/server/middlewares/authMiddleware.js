@@ -1,9 +1,9 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "chalNaChutiye";
+require("dotenv").config();
 const authMiddleware = (req, res, next) => {
     const token = req.headers.token;
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const UserId = decoded.UserId;
 
     if (UserId) {

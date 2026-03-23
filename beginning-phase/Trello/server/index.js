@@ -3,7 +3,8 @@ const express = require("express");
 const { users, organizations, issues, boards } = data;
 const { authMiddleware } = require("./authMiddleware");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "chalNaChutiye";
+require("dotenv").config();
+
 
 
 
@@ -51,7 +52,7 @@ app.post("/signin", (req, res) => {
         return;
     }
 
-    const token = jwt.sign({ UserId: UserExists.id, username: UserExists.username }, JWT_SECRET);
+    const token = jwt.sign({ UserId: UserExists.id, username: UserExists.username }, process.env.JWT_SECRET);
     UserExists.token = token;
     res.json({ token, UserExists });
 })
