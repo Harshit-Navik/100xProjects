@@ -1,53 +1,87 @@
-import React from 'react'
-import { Link } from 'react-router-dom';
-import { io } from "socket.io-client";
-import { useState } from 'react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { socket } from "./socket"; // reuse same socket
 
 const JoinRoom = () => {
-    const [roomId, setRoomId] = useState("");
+    const navigate = useNavigate();
 
-    const joinRoom = (roomId) => {
-       if (!roomId) {
-            console.log("Room ID and members are required");
+    const [roomId, setRoomId] = useState("");
+    const [userName, setUserName] = useState("");
+    const [error, setError] = useState("");
+
+    const joinRoom = () => {
+        // 🔹 Validation
+        if (!roomId.trim()) {
+            setError("Room ID is required");
             return;
         }
 
-        const socket = io("http://localhost:8080");
+        if (!userName.trim()) {
+            setError("Username is required");
+            return;
+        }
 
-        socket.emit("join_room", {
-            roomId: roomId,
-        });
+        setError("");
 
-        console.log(`joining room with roomId: ${roomId} as user`);
-
+        // 🔹 Emit with acknowledgment
+        socket.emit(
+            "join_room",
+            { roomId, userName },
+            (res) => {
+                if (res.success) {
+                    // ✅ Navigate only if join successful
+                    navigate("/chat", {
+                        state: { roomId, userName },
+                    });
+                } else {
+                    setError(res.message || "Failed to join room");
+                }
+            }
+        );
     };
-   
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800">
-      <div className="bg-gray-900/60 backdrop-blur-lg border border-gray-700 rounded-2xl shadow-2xl p-10 w-[350px] flex flex-col gap-6">
-        <h2 className="text-2xl font-bold text-white text-center">
-          Join Room
-        </h2>
 
-        {/* Room ID Input */}
-        <input
-          type="text"
-          value={roomId}
-          onChange={(e) => {setRoomId(e.target.value)}}
-          placeholder="Enter Room ID"
-          className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800">
+            <div className="bg-gray-900/60 backdrop-blur-lg border border-gray-700 rounded-2xl shadow-2xl p-10 w-[350px] flex flex-col gap-6">
 
-        {/* Join Button */}
-        <Link to={"/chat"}
-        onClick={() => joinRoom(roomId)}
-          className="w-full py-3 flex items-center justify-center rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold text-lg shadow-lg hover:scale-105 hover:shadow-green-500/30 transition-all duration-300"
-        >
-          Join Room
-        </Link>
-      </div>
-    </div>
-  );
-}
+                <h2 className="text-2xl font-bold text-white text-center">
+                    Join Room
+                </h2>
 
-export default JoinRoom
+                {/* Error */}
+                {error && (
+                    <p className="text-red-400 text-sm text-center">{error}</p>
+                )}
+
+                {/* Room ID */}
+                <input
+                    type="text"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value)}
+                    placeholder="Enter Room ID"
+                    className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white border border-gray-700"
+                />
+
+                {/* Username */}
+                <input
+                    type="text"
+                    placeholder="Enter Username"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white border border-gray-700"
+                />
+
+                {/* Button */}
+                <button
+                    onClick={joinRoom}
+                    className="w-full py-3 flex items-center justify-center rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold text-lg hover:scale-105 transition"
+                >
+                    Join Room
+                </button>
+
+            </div>
+        </div>
+    );
+};
+
+export default JoinRoom;

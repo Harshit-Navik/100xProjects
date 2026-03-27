@@ -1,28 +1,52 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom';
-import { io } from "socket.io-client";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { socket } from "./socket"; // make sure this file exists
 
 const CreateRoom = () => {
+    const navigate = useNavigate();
 
     const [roomId, setRoomId] = useState("");
     const [members, setMembers] = useState("2");
+    const [userName, setUserName] = useState("");
+    const [error, setError] = useState("");
 
     const createRoom = () => {
-        if (!roomId || !members) {
-            console.log("Room ID and members are required");
+        // 🔹 Validation
+        if (!roomId.trim()) {
+            setError("Room ID is required");
             return;
         }
 
-        const socket = io("http://localhost:8080");
+        if (!userName.trim()) {
+            setError("Username is required");
+            return;
+        }
 
-        socket.emit("create_room", {
-            roomId: roomId,
-            maxMembers: members,
-            role: "host"
-        });
+        setError("");
 
-        console.log("Creating room:", roomId, "with members:", members);
-    }
+        // 🔹 Emit event with acknowledgment
+        socket.emit(
+            "create_room",
+            {
+                roomId,
+                userName,
+                maxMembers: Number(members),
+                role: "host",
+            },
+            (res) => {
+                if (res.success) {
+                    navigate("/chat", {
+                        state: { roomId, userName, members },
+                    });
+                } else {
+                    setError(res.message || "Failed to create room");
+                }
+            }
+        );
+
+        localStorage.setItem("userName", userName);
+
+    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800">
@@ -32,7 +56,12 @@ const CreateRoom = () => {
                     Create Room
                 </h2>
 
-                {/* Room ID Input */}
+                {/* Error Message */}
+                {error && (
+                    <p className="text-red-400 text-sm text-center">{error}</p>
+                )}
+
+                {/* Room ID */}
                 <input
                     type="text"
                     placeholder="Enter Room ID"
@@ -41,7 +70,16 @@ const CreateRoom = () => {
                     className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white border border-gray-700"
                 />
 
-                {/* Members Dropdown */}
+                {/* Username */}
+                <input
+                    type="text"
+                    placeholder="Enter Username"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white border border-gray-700"
+                />
+
+                {/* Members */}
                 <select
                     value={members}
                     onChange={(e) => setMembers(e.target.value)}
@@ -53,17 +91,16 @@ const CreateRoom = () => {
                 </select>
 
                 {/* Button */}
-                <Link
-                    to="/chat"
-                    onClick={() => {createRoom()}}
-                    className="w-full py-3 rounded-xl flex items-center justify-center bg-blue-500 text-white"
+                <button
+                    onClick={createRoom}
+                    className="w-full py-3 rounded-xl flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 transition"
                 >
                     Create Room
-                </Link>
+                </button>
 
             </div>
         </div>
     );
-}
+};
 
 export default CreateRoom;
