@@ -1,10 +1,15 @@
 const data = require("./data");
 const express = require("express");
 const { users, organizations, issues, boards } = data;
-const { authMiddleware } = require("./authMiddleware");
+const  authMiddleware  = require("./middlewares/authMiddleware");
+const verifyMember = require("./middlewares/verifyMember");
+const verifyOrg = require("./middlewares/verifyOrg");
+const signUpHandler = require("./controllers/signUpHandler");
+const signInHandler = require("./controllers/signInHandler");
+const organizationHandler = require("./controllers/organizationHandler");
+const addMembersController = require("./controllers/addMembersController");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-
 
 
 
@@ -16,96 +21,18 @@ const app = express();
 
 app.use(express.json());
 
-// Post endpoints 
+//  ------------------------- Post endpoints ----------------------------------
 
-app.post("/signup", (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
+app.post("/signup", signUpHandler);
 
-    const UserExists = users.find(user => user.username == username);
-    if (UserExists) {
-        res.status(411).json({
-            message: "user already exists"
-        })
-        return;
-    }
+app.post("/signin", signInHandler);
 
-    users.push({
-        username,
-        password,
-        id: USER_ID++
-    })
+app.post("/organization", authMiddleware, organizationHandler);
 
-    res.status(200).json({ username, password });
-    return;
-});
-
-app.post("/signin", (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
-
-    const UserExists = users.find(user => user.username == username && user.password == password);
-    if (!UserExists) {
-        res.status(403).json({
-            message: "invalid credentials"
-        })
-        return;
-    }
-
-    const token = jwt.sign({ UserId: UserExists.id, username: UserExists.username }, process.env.JWT_SECRET);
-    UserExists.token = token;
-    res.json({ token, UserExists });
-})
+app.post("/add-member-to-organization", authMiddleware, verifyOrg, verifyMember, addMembersController )
 
 
-app.post("/organization", authMiddleware, (req, res) => {
-    const UserId = req.USER_ID;
-
-    organizations.push({
-        id: ORGANIZATION_ID++,
-        title: req.body.title,
-        description: req.body.description,
-        admin: UserId,
-        members: []
-    })
-    req.status(200).json({
-        message: "organization created successfully",
-        id: ORGANIZATION_ID - 1,
-    })
-});
-
-app.post("/add-member-to-organization", authMiddleware, (req, res) => {
-    const UserId = req.UserId;
-    const organizationId = req.body.organizationId;
-    const memberUsername = req.body.email;
-
-    const organization = organizations.find(org => org.id == organizationId)
-
-    if (!organization || organization.admin != UserId) {
-        res.status(411).json({
-            message: "either this org doesnt exist or you are not admin"
-        })
-
-        return;
-    }
-
-    const MemberUsername = users.find(user => user.username == memberUsername);
-
-    if (!MemberUsername) {
-        res.status(411).json({
-            message: "something went wrong"
-        })
-    }
-    organization.members.push(MemberUsername.id);
-
-    res.json({
-        message: "new member added !!"
-    })
-
-})
-
-
-app.post("/board", authMiddleware, (req, res) => {
+app.post("/board", authMiddleware, verifyOrg, (req, res) => {
     const UserId = req.USER_ID;
 
     const UserExists = organizations.map(org => org.admin == UserId)
@@ -115,14 +42,14 @@ app.post("/issue", (req, res) => {
 
 });
 
-// get endpoints 
+// ----------------------------- get endpoints -------------------------------- 
 
-app.get("/organization/:organizationId", (req , res) => {
-    
-} )
+app.get("/organization/:organizationId", (req, res) => {
+
+})
 
 
-// delete endpoints
+//------------------------------- delete endpoints ------------------------------------------------
 
 app.delete("/members", (req, res) => {
     const UserId = req.UserId;

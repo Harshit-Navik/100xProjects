@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+
 const authMiddleware = (req, res, next) => {
     const token = req.headers.token;
 
@@ -9,8 +10,8 @@ const authMiddleware = (req, res, next) => {
     if (UserId) {
         req.UserId = UserId;
         next();
-    }else{
-        res.status(403).json({
+    } else {
+        return res.status(403).json({
             message: "something went wrong"
         })
     }
@@ -19,4 +20,4 @@ const authMiddleware = (req, res, next) => {
 
 
 
-module.exports = { authMiddleware };
+module.exports = authMiddleware ;
